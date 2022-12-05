@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        // data'yı yükleyelim
+        var data = []; // data'yı tutacak dizi oluşturduk.
+        var dataFile = "avilahtrain-tr.csv"; // data'yı tutan dosya adı
+        var req = new XMLHttpRequest(); // XMLHttpRequest nesnesi oluşturduk.
+        req.open("GET", dataFile, false); // dosyayı okumak için GET isteği yolladık.
+        req.send(null); // isteği gönderdik.
+        var data = req.responseText.split("\n"); // gelen cevabı satır satır ayırdık.
+        data = data.map(function (row) { // her satırı virgüle göre ayırdık.
+            return row.split(",");
+        });
+        data = data.map(function (row) { // her satırı sayıya çevirdik.
+            return row.map(function (value) {
+                return parseFloat(value);
+            });
+        });
+        document.write("Yüklenen data sayısı : " + data.length + " satır<br>"); // data'yı ekrana yazdırdık.
+        
+    </script>
+
+    <!-- KNN algoritması -->
+    <script>
+        // 1. uzaklık hesaplama fonksiyonu: minskowski-3 uzaklığını hesaplar.
+        function distance(point1, point2) {
+            var sum = 0;
+            for (var i = 0; i < point1.length; i++) {
+                sum += Math.pow(Math.abs(point1[i] - point2[i]), 3);
+            }
+            return Math.pow(sum, 1 / 3);
+        }
+        
+        // 2. en yakın komşu bulma fonksiyonu
+        function nearestNeighbor(point, data) {
+            var min = Infinity;
+            var minIndex = -1;
+            for (var i = 0; i < data.length; i++) {
+                var dist = distance(point, data[i]);
+                if (dist < min) {
+                    min = dist;
+                    minIndex = i;
+                }
+            }
+            return minIndex;
+        }
+        // 3. komşu sayısına göre sınıf tahmini fonksiyonu
+        function knn(point, data, k) {
+            var votes = {};
+            for (var i = 0; i < k; i++) {
+                var nn = nearestNeighbor(point, data);
+                var label = data[nn][data[nn].length - 1];
+                if (label in votes) {
+                    votes[label] += 1;
+                } else {
+                    votes[label] = 1;
+                }
+                data.splice(nn, 1);
+            }
+            var maxVotes = 0;
+            var maxVotesLabel = -1;
+            for (var label in votes) {
+                if (votes[label] > maxVotes) {
+                    maxVotes = votes[label];
+                    maxVotesLabel = label;
+                }
+            }
+            return maxVotesLabel;
+        }
+        // 4. tahmin fonksiyonu
+        function predict(point, data, k) {
+            var label = knn(point, data, k);
+            return label;
+        }
+        // 5. doğruluk fonksiyonu
+        function accuracy(data, k) {
+            var correct = 0;
+            for (var i = 0; i < data.length; i++) {
+                var point = data[i];
+                var label = point[point.length - 1];
+                point.splice(point.length - 1, 1);
+                var prediction = predict(point, data, k);
+                if (prediction == label) {
+                    correct += 1;
+                }
+            }
+            return correct / data.length;
+        }
+        // k değerini kullanıcıdan alalım.
+        var k = prompt("K değerini giriniz : ");
+        var point = [-0.351118,-0.244132,0.594823,1.592678,0.797987,0.605563,-0.534832,1.344031,1.498432,1.078332];
+        var label = predict(point, data, k);
+        document.write("Tahmin edilen sınıf : " + label + "<br>");
+        // 2. doğruluk fonksiyonunu test edelim.
+        var acc = accuracy(data, 3);
+        document.write("Doğruluk oranı : " + acc + "<br>");
+    </script>
+
+    <!-- 0-11 arası olan küme etiketlerini canvan üzerinde göster-->
+    <script>
+
+        document.write("Küme etiketleri : <br><br>");
+
+        var canvas = document.createElement("canvas");
+        canvas.width = 500;
+        canvas.height = 500;
+        document.body.appendChild(canvas);
+        var ctx = canvas.getContext("2d");
+        var colors = ["red", "green", "blue", "yellow", "orange", "purple", "pink", "brown", "black", "gray", "white"];
+        for (var i = 0; i < data.length; i++) {
+            var point = data[i];
+            var label = point[point.length - 1];
+            ctx.fillStyle = colors[label];
+            ctx.fillRect(point[0] * 100 + 100, point[1] * 100 + 100, 5, 5);
+        }
+    </script>
+
+</body>
+</html>
